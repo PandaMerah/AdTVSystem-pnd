@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@keyframes adtvFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes adtvSlideIn {
+  from { opacity: 0; transform: translate3d(4%, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes adtvZoomIn {
+  from { opacity: 0; transform: scale3d(1.06, 1.06, 1); }
+  to { opacity: 1; transform: scale3d(1, 1, 1); }
+}
+
+@keyframes adtvMarquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+.anim-fade {
+  animation: adtvFadeIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.anim-slide {
+  animation: adtvSlideIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.anim-zoom {
+  animation: adtvZoomIn 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.anim-none {
+  animation: none;
+}
+
+.ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: adtvMarquee var(--ticker-duration, 35s) linear infinite;
+}
+
+.kiosk-screen {
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
