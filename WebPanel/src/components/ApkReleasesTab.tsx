@@ -9,7 +9,10 @@ interface Props {
 }
 
 export function ApkReleasesTab({ releases, onRefresh }: Props) {
+  const [mode, setMode] = useState<'url' | 'file'>('file');
   const [file, setFile] = useState<File | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const [sha256, setSha256] = useState('');
   const [versionCode, setVersionCode] = useState('2');
   const [versionName, setVersionName] = useState('1.0.1');
   const [changelog, setChangelog] = useState('');
@@ -19,18 +22,27 @@ export function ApkReleasesTab({ releases, onRefresh }: Props) {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return;
     setUploading(true);
     setError('');
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('versionCode', versionCode);
-      fd.append('versionName', versionName);
-      fd.append('changelog', changelog);
-      fd.append('mandatory', String(mandatory));
-      await apiFetch('/api/admin/apk/upload', { method: 'POST', body: fd });
-      setFile(null);
+      if (mode === 'url') {
+        await apiFetch('/api/admin/apk/url', {
+          method: 'POST',
+          body: JSON.stringify({ versionCode: Number(versionCode), versionName, downloadUrl, sha256, changelog, mandatory }),
+        });
+        setDownloadUrl('');
+        setSha256('');
+      } else {
+        if (!file) return;
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('versionCode', versionCode);
+        fd.append('versionName', versionName);
+        fd.append('changelog', changelog);
+        fd.append('mandatory', String(mandatory));
+        await apiFetch('/api/admin/apk/upload', { method: 'POST', body: fd });
+        setFile(null);
+      }
       setChangelog('');
       onRefresh();
     } catch (err) {
@@ -68,7 +80,25 @@ export function ApkReleasesTab({ releases, onRefresh }: Props) {
       </div>
 
       <form onSubmit={handleUpload} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900/70 p-5">
-        <h3 className="text-base font-bold text-white">Publish New APK Release</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-bold text-white">Publish New APK Release</h3>
+          <div className="flex rounded-lg border border-zinc-700 bg-zinc-950 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setMode('file')}
+              className={`rounded-md px-2.5 py-1 font-medium ${mode === 'file' ? 'bg-indigo-600 text-white' : 'text-zinc-400'}`}
+            >
+              Upload .apk
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('url')}
+              className={`rounded-md px-2.5 py-1 font-medium ${mode === 'url' ? 'bg-indigo-600 text-white' : 'text-zinc-400'}`}
+            >
+              External APK URL (Vercel / GitHub)
+            </button>
+          </div>
+        </div>
         {error && <div className="rounded-lg bg-rose-500/15 px-3 py-2 text-sm text-rose-300">{error}</div>}
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
@@ -92,17 +122,39 @@ export function ApkReleasesTab({ releases, onRefresh }: Props) {
               className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-zinc-400">Signed APK File (.apk)</label>
-            <input
-              type="file"
-              accept=".apk"
-              required
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-sm text-zinc-300"
-            />
-          </div>
+          {mode === 'file' ? (
+            <div>
+              <label className="mb-1 block text-xs text-zinc-400">Signed APK File (.apk)</label>
+              <input
+                type="file"
+                accept=".apk"
+                required
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-sm text-zinc-300"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="mb-1 block text-xs text-zinc-400">SHA-256 (optional)</label>
+              <input
+                value={sha256}
+                onChange={(e) => setSha256(e.target.value)}
+                placeholder="64-char hex checksum"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white"
+              />
+            </div>
+          )}
         </div>
+        {mode === 'url' && (
+          <input
+            type="url"
+            required
+            value={downloadUrl}
+            onChange={(e) => setDownloadUrl(e.target.value)}
+            placeholder="https://github.com/.../releases/download/v1.0.1/app-release.apk"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white"
+          />
+        )}
         <input
           value={changelog}
           onChange={(e) => setChangelog(e.target.value)}
@@ -116,11 +168,11 @@ export function ApkReleasesTab({ releases, onRefresh }: Props) {
           </label>
           <button
             type="submit"
-            disabled={uploading || !file}
+            disabled={uploading || (mode === 'file' ? !file : !downloadUrl)}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
           >
             <Upload className="h-4 w-4" />
-            {uploading ? 'Uploading & Hashing...' : 'Publish APK'}
+            {uploading ? 'Publishing...' : 'Publish APK'}
           </button>
         </div>
       </form>
@@ -157,7 +209,9 @@ export function ApkReleasesTab({ releases, onRefresh }: Props) {
             </div>
             <div className="flex items-center gap-2">
               <a
-                href={`/api/apk/download/${encodeURIComponent(r.filename)}`}
+                href={r.download_url || `/api/apk/download/${encodeURIComponent(r.filename)}`}
+                target="_blank"
+                rel="noreferrer"
                 className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
               >
                 Download

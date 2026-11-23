@@ -66,6 +66,7 @@ export interface ApkRelease {
   version_code: number;
   version_name: string;
   filename: string;
+  download_url?: string | null;
   size_bytes: number;
   sha256: string;
   changelog: string;

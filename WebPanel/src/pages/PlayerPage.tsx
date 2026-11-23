@@ -49,12 +49,22 @@ export function PlayerPage({ deviceIdParam }: { deviceIdParam?: string }) {
   const [sseStatus, setSseStatus] = useState<'connecting' | 'live' | 'offline'>('connecting');
   const currentSlideTitleRef = useRef('');
 
+  const lastReloadAtRef = useRef<number>(0);
+  const lastApkCheckAtRef = useRef<number>(0);
+  const revisionRef = useRef<string>('');
+
   const fetchConfig = async () => {
     try {
       const res = await fetch(`/api/player/${encodeURIComponent(deviceId)}`);
       if (!res.ok) return;
       const data: PlayerConfig = await res.json();
       setConfig(data);
+      revisionRef.current = data.playlist?.revision || '';
+      if (data.device) {
+        const d = data.device as unknown as { reload_at?: number; apk_check_at?: number };
+        if (d.reload_at && lastReloadAtRef.current === 0) lastReloadAtRef.current = d.reload_at;
+        if (d.apk_check_at && lastApkCheckAtRef.current === 0) lastApkCheckAtRef.current = d.apk_check_at;
+      }
       localStorage.setItem(cacheKey, JSON.stringify(data));
     } catch {
       // keep cached config when offline
@@ -63,7 +73,35 @@ export function PlayerPage({ deviceIdParam }: { deviceIdParam?: string }) {
 
   useEffect(() => {
     fetchConfig();
-    const poll = setInterval(fetchConfig, 60000);
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/player/${encodeURIComponent(deviceId)}/revision`);
+        if (!res.ok) return;
+        const rev: { revision: string; reloadAt: number; apkCheckAt: number } = await res.json();
+        if (rev.reloadAt && rev.reloadAt > lastReloadAtRef.current && lastReloadAtRef.current > 0) {
+          window.location.reload();
+          return;
+        }
+        if (rev.reloadAt) lastReloadAtRef.current = rev.reloadAt;
+
+        if (rev.apkCheckAt && rev.apkCheckAt > lastApkCheckAtRef.current && lastApkCheckAtRef.current > 0) {
+          lastApkCheckAtRef.current = rev.apkCheckAt;
+          try {
+            window.AndroidKiosk?.checkForUpdate?.();
+          } catch {
+            // ignore
+          }
+        } else if (rev.apkCheckAt) {
+          lastApkCheckAtRef.current = rev.apkCheckAt;
+        }
+
+        if (rev.revision && rev.revision !== revisionRef.current) {
+          fetchConfig();
+        }
+      } catch {
+        // ignore offline poll
+      }
+    }, 4000);
     return () => clearInterval(poll);
   }, [deviceId]);
 

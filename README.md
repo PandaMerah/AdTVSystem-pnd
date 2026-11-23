@@ -4,7 +4,7 @@ A two-part digital signage platform designed for **instant cloud UI/content upda
 
 ## Architecture
 
-1. **`WebPanel/` (Node.js 24 + Express + SQLite + React + Tailwind)**
+1. **`WebPanel/` (Node.js 24 + Express + Firebase Firestore / SQLite + React + Tailwind)**
    - **Admin Panel (`/`)**: Manage TV screens, playlists, layouts (`fullscreen`, `split`, `lbar`), scrolling tickers, animations (`fade`, `slide`, `zoom`), media uploads, and signed `.apk` OTA releases.
    - **TV Player (`/player/:deviceId`)**: Fullscreen 16:9 web player with Server-Sent Events (`/api/events`) for sub-second live updates without reloading or updating the APK, plus `localStorage` offline caching and heartbeat reporting.
    - **APK OTA Endpoints**: `GET /api/apk/latest` and `GET /api/apk/download/:filename` with automatic SHA-256 verification.
@@ -30,6 +30,14 @@ npm start
 - **TV Player Preview**: `http://localhost:3001/player/tv-lobby-01`
 - **Docker**: `cd WebPanel && docker compose up -d --build`
 - **Nginx**: See `WebPanel/nginx.conf.example` (SSE buffering disabled on `/api/events`).
+- **Vercel + Firebase Firestore**:
+  1. In **Firebase Console** → **Project Settings** → **Service accounts**, click **Generate new private key** to download your service account JSON.
+  2. Import the repo in **Vercel** and set **Root Directory** to `WebPanel`.
+  3. Add **Environment Variables** in Vercel:
+     - `FIREBASE_SERVICE_ACCOUNT_JSON`: paste the full JSON content of your Firebase service account key (or set `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` individually).
+     - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `AUTH_SECRET`.
+     - *(Optional)* `BLOB_READ_WRITE_TOKEN` (Vercel Blob) for direct media/APK uploads, or use the **External APK URL** / **Add URL** options in the Admin Panel.
+  4. Deploy — `WebPanel/vercel.json` routes `/api/*` to the serverless Express handler (`api/index.mjs`) and serves the React SPA from `dist/`. TVs automatically poll `/api/player/:deviceId/revision` every 4 seconds for instant updates on Vercel.
 
 ---
 
