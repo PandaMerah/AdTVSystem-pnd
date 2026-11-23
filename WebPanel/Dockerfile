@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN chmod +x node_modules/.bin/* && npm run build
 
 ENV PORT=3001
 ENV DATA_DIR=/app/data
