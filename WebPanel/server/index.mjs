@@ -51,6 +51,19 @@ if (!USE_BLOB) {
   app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '7d' }));
 }
 
+app.get('/api/health', async (_req, res) => {
+  try {
+    await ensureDb();
+    res.json({ ok: true, backend: USE_FIREBASE ? 'firebase-firestore' : 'sqlite', vercel: Boolean(process.env.VERCEL) });
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      backend: USE_FIREBASE ? 'firebase-firestore' : 'sqlite',
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
 app.use('/api', async (_req, _res, next) => {
   try {
     await ensureDb();
@@ -521,6 +534,12 @@ app.delete('/api/admin/apk/:id', requireAuth, async (req, res) => {
     if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
   }
   res.json({ ok: true });
+});
+
+// -------------------- ERROR HANDLER --------------------
+app.use((err, _req, res, _next) => {
+  console.error('API Error:', err);
+  res.status(500).json({ error: err instanceof Error ? err.message : 'Internal Server Error' });
 });
 
 // -------------------- FRONTEND SPA (Local / Docker) --------------------

@@ -30,27 +30,6 @@ if (!USE_FIREBASE) {
 let firestore = null;
 let sqliteDb = null;
 
-if (USE_FIREBASE) {
-  const { initializeApp, cert, getApps } = await import('firebase-admin/app');
-  const { getFirestore } = await import('firebase-admin/firestore');
-
-  if (getApps().length === 0) {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
-      : {
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-        };
-    initializeApp({ credential: cert(serviceAccount) });
-  }
-  firestore = getFirestore();
-} else {
-  const { DatabaseSync } = await import('node:sqlite');
-  sqliteDb = new DatabaseSync(path.join(DATA_DIR, 'adtv.db'));
-  sqliteDb.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
-}
-
 function createDemoSvgDataUri(title, subtitle, gradStart, gradEnd) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
   <defs>
@@ -73,7 +52,28 @@ let initPromise = null;
 export async function ensureDb() {
   if (initPromise) return initPromise;
   initPromise = (async () => {
-    if (!USE_FIREBASE) {
+    if (USE_FIREBASE) {
+      if (!firestore) {
+        const { initializeApp, cert, getApps } = await import('firebase-admin/app');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        if (getApps().length === 0) {
+          const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+            ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
+            : {
+                projectId: process.env.FIREBASE_PROJECT_ID,
+                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+              };
+          initializeApp({ credential: cert(serviceAccount) });
+        }
+        firestore = getFirestore();
+      }
+    } else {
+      if (!sqliteDb) {
+        const { DatabaseSync } = await import('node:sqlite');
+        sqliteDb = new DatabaseSync(path.join(DATA_DIR, 'adtv.db'));
+        sqliteDb.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+      }
       sqliteDb.exec(`
         CREATE TABLE IF NOT EXISTS media (
           id TEXT PRIMARY KEY,

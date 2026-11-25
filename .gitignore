@@ -1,0 +1,16 @@
+# Node / WebPanel
+node_modules/
+WebPanel/node_modules/
+WebPanel/dist/
+WebPanel/data/
+.env
+.env.*
+.vercel/
+
+# Android / TV APK
+TV APK/.gradle/
+TV APK/build/
+TV APK/app/build/
+TV APK/local.properties
+*.iml
+.idea/
