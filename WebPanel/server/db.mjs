@@ -225,7 +225,12 @@ export async function ensureDb() {
       apk_check_at: 0,
     });
   })();
-  return initPromise;
+  try {
+    return await initPromise;
+  } catch (err) {
+    initPromise = null;
+    throw err;
+  }
 }
 
 // -------------------- MEDIA --------------------
