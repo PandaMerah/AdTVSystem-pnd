@@ -7,11 +7,11 @@ object KioskPrefs {
     private const val PREFS_NAME = "adtv_kiosk_prefs"
     private const val KEY_SERVER_URL = "server_url"
     private const val KEY_DEVICE_ID = "device_id"
-    private const val DEFAULT_SERVER_URL = "http://192.168.1.100:3001"
 
     fun getServerUrl(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_SERVER_URL, DEFAULT_SERVER_URL)?.trimEnd('/') ?: DEFAULT_SERVER_URL
+        return prefs.getString(KEY_SERVER_URL, BuildConfig.DEFAULT_SERVER_URL)?.trimEnd('/')
+            ?: BuildConfig.DEFAULT_SERVER_URL
     }
 
     fun setServerUrl(context: Context, url: String) {

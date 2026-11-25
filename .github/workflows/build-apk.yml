@@ -31,6 +31,8 @@ jobs:
           gradle-version: '8.10.2'
 
       - name: Build Debug & Release APKs
+        env:
+          ADTV_SERVER_URL: ${{ vars.ADTV_SERVER_URL }}
         run: gradle assembleDebug assembleRelease
 
       - name: Upload APK Artifacts

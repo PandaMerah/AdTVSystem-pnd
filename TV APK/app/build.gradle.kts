@@ -13,6 +13,10 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
+
+        val serverUrl = System.getenv("ADTV_SERVER_URL")?.takeIf { it.isNotBlank() }
+            ?: "https://your-app.vercel.app"
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"$serverUrl\"")
     }
 
     buildTypes {
